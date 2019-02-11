@@ -3,6 +3,7 @@ import { Record } from 'immutable'
 import { createSelector } from 'reselect'
 import { takeEvery, call, put, all } from 'redux-saga/effects'
 import api from '../services/api'
+import { reset } from 'redux-form'
 
 /**
  * Constants
@@ -22,7 +23,8 @@ export const AUTH_STATE_CHANGE = `${prefix}/AUTH_STATE_CHANGE`
  * Reducer
  * */
 export const ReducerRecord = Record({
-  user: null
+  user: null,
+  error: 0
 })
 
 export default function reducer(state = new ReducerRecord(), action) {
@@ -33,7 +35,9 @@ export default function reducer(state = new ReducerRecord(), action) {
     case SIGN_UP_SUCCESS:
     case AUTH_STATE_CHANGE:
       return state.set('user', payload.user)
-
+    case SIGN_IN_ERROR:
+      const errorQuantity = state.get('error')
+      return state.set('error', errorQuantity + 1)
     default:
       return state
   }
@@ -47,6 +51,12 @@ export const userSelector = (state) => state[moduleName].user
 export const isAuthorizedSelector = createSelector(
   userSelector,
   (user) => !!user
+)
+
+export const signInErrorSelector = (state) => state[moduleName].error
+export const isSignInErrorSelector = createSelector(
+  signInErrorSelector,
+  (error) => error >= 3
 )
 
 /**
@@ -91,6 +101,7 @@ export function* signInSaga({ payload: { email, password } }) {
       type: SIGN_IN_SUCCESS,
       payload: { user }
     })
+    yield put(reset('sign-in'))
   } catch (error) {
     yield put({
       type: SIGN_IN_ERROR,
