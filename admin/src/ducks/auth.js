@@ -13,7 +13,9 @@ const prefix = `${appName}/${moduleName}`
 export const SIGN_IN_REQUEST = `${prefix}/SIGN_IN_REQUEST`
 export const SIGN_IN_SUCCESS = `${prefix}/SIGN_IN_SUCCESS`
 export const SIGN_IN_ERROR = `${prefix}/SIGN_IN_ERROR`
+export const SIGN_UP_REQUEST = `${prefix}/SIGN_UP_REQUEST`
 export const SIGN_UP_SUCCESS = `${prefix}/SIGN_UP_SUCCESS`
+export const SIGN_UP_ERROR = `${prefix}/SIGN_UP_ERROR`
 export const AUTH_STATE_CHANGE = `${prefix}/AUTH_STATE_CHANGE`
 
 /**
@@ -71,13 +73,10 @@ export function signIn(email, password) {
 }
 
 export function signUp(email, password) {
-  return (dispatch) =>
-    api.signUp(email, password).then((user) =>
-      dispatch({
-        type: SIGN_UP_SUCCESS,
-        payload: { user }
-      })
-    )
+  return {
+    type: SIGN_UP_REQUEST,
+    payload: { email, password }
+  }
 }
 
 /**
@@ -100,6 +99,25 @@ export function* signInSaga({ payload: { email, password } }) {
   }
 }
 
+export function* signUpSaga(email, password) {
+  try {
+    const user = yield call(api.signUp, email, password)
+
+    yield put({
+      type: SIGN_UP_SUCCESS,
+      payload: { user }
+    })
+  } catch (error) {
+    yield put({
+      type: SIGN_UP_ERROR,
+      error
+    })
+  }
+}
+
 export function* saga() {
-  yield all([takeEvery(SIGN_IN_REQUEST, signInSaga)])
+  yield all([
+    takeEvery(SIGN_IN_REQUEST, signInSaga),
+    takeEvery(SIGN_UP_REQUEST, signInSaga)
+  ])
 }
