@@ -34,10 +34,12 @@ export default function reducer(state = new ReducerRecord(), action) {
     case SIGN_IN_SUCCESS:
     case SIGN_UP_SUCCESS:
     case AUTH_STATE_CHANGE:
-      return state.set('user', payload.user)
+      return state.merge({
+        user: payload.user,
+        error: 0
+      })
     case SIGN_IN_ERROR:
-      const errorQuantity = state.get('error')
-      return state.set('error', errorQuantity + 1)
+      return state.update('error', (error) => +error) // Should the logic be placed here?
     default:
       return state
   }
