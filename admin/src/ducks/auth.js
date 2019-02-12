@@ -9,7 +9,7 @@ import { reset } from 'redux-form'
  * Constants
  * */
 export const moduleName = 'auth'
-const prefix = `${appName}/${moduleName}`
+export const prefix = `${appName}/${moduleName}`
 
 export const SIGN_IN_REQUEST = `${prefix}/SIGN_IN_REQUEST`
 export const SIGN_IN_SUCCESS = `${prefix}/SIGN_IN_SUCCESS`
@@ -118,6 +118,7 @@ export function* signUpSaga(email, password) {
       type: SIGN_UP_SUCCESS,
       payload: { user }
     })
+    yield put(reset('sign-up'))
   } catch (error) {
     yield put({
       type: SIGN_UP_ERROR,
