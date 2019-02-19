@@ -189,21 +189,19 @@ export const fetchLazySaga = function*() {
 }
 
 export function* addPersonToEventSaga({ payload: { personId, eventId } }) {
-  const state = yield select(stateSelector)
+  const entities = yield select(eventListSelector)
+  const participants = entities
+    .find((event) => event.id == eventId)
+    .participants.toArray()
+
+  if (participants.includes(personId)) return null
 
   try {
-    const participantList = state
-      .get('entities')
-      .find((event) => event.id == eventId)
-      .participants.toArray()
+    const eventIndex = entities.findIndex((event) => event.id == eventId)
 
-    const data = yield call(api.updateEvent, eventId, {
-      participants: [...participantList, personId]
+    yield call(api.updateEvent, eventId, {
+      participants: [...participants, personId]
     })
-
-    const eventIndex = state
-      .get('entities')
-      .findIndex((event) => event.id == eventId)
 
     yield put({
       type: ADD_PERSON_TO_EVENT_SUCCESS,
