@@ -114,22 +114,24 @@ export const eventListSelector = createSelector(
   entitiesSelector,
   (entities) => entities.toArray()
 )
-
 export const selectionSelector = createSelector(
   stateSelector,
   (state) => state.selected.toArray()
 )
-
 export const selectedEventsSelector = createSelector(
   selectionSelector,
   entitiesSelector,
   (selection, entities) =>
     selection
       .map((id) => entities.find((event) => event.id === id))
-      .map((event) => ({
-        ...event.toJS(),
-        participants: event.toJS().participants
-      }))
+      .map((event) => {
+        return (
+          event && {
+            ...event.toJS(),
+            participants: event.toJS().participants
+          }
+        )
+      })
 )
 
 /**
@@ -184,7 +186,7 @@ export function* fetchAllSaga() {
   })
 }
 
-export const fetchLazySaga = function*() {
+export function* fetchLazySaga() {
   const state = yield select(stateSelector)
 
   if (state.loading || state.loaded) return
