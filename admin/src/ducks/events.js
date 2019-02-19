@@ -1,4 +1,4 @@
-import { all, takeEvery, put, call, select } from 'redux-saga/effects'
+import { all, takeEvery, put, call, take, select } from 'redux-saga/effects'
 import { appName } from '../config'
 import { Record, List, OrderedSet } from 'immutable'
 import { createSelector } from 'reselect'
@@ -17,6 +17,7 @@ export const FETCH_ALL_SUCCESS = `${prefix}/FETCH_ALL_SUCCESS`
 
 export const TOGGLE_SELECTION = `${prefix}/TOGGLE_SELECTION`
 export const ADD_PERSON_TO_EVENT = `${prefix}/ADD_PERSON_TO_EVENT`
+export const ADD_PERSON_TO_EVENT_SUCCESS = `${prefix}/ADD_PERSON_TO_EVENT_SUCCESS`
 
 export const FETCH_LAZY_REQUEST = `${prefix}/FETCH_LAZY_REQUEST`
 export const FETCH_LAZY_START = `${prefix}/FETCH_LAZY_START`
@@ -39,7 +40,8 @@ export const EventRecord = Record({
   title: null,
   url: null,
   when: null,
-  where: null
+  where: null,
+  participants: new List([])
 })
 
 export default function reducer(state = new ReducerRecord(), action) {
@@ -68,6 +70,17 @@ export default function reducer(state = new ReducerRecord(), action) {
         .mergeIn(['entities'], fbToEntities(payload, EventRecord))
         .set('loaded', Object.keys(payload).length < 10)
 
+    case ADD_PERSON_TO_EVENT_SUCCESS:
+      return state.updateIn(['entities'], (entities) => {
+        return entities.updateIn(
+          [payload.eventIndex, 'participants'],
+          (participants) => {
+            console.log(participants.push(payload.personId))
+            return participants.push(payload.personId)
+          }
+        )
+      })
+
     default:
       return state
   }
@@ -76,7 +89,6 @@ export default function reducer(state = new ReducerRecord(), action) {
 /**
  * Selectors
  * */
-
 export const stateSelector = (state) => state[moduleName]
 export const entitiesSelector = createSelector(
   stateSelector,
@@ -104,13 +116,17 @@ export const selectedEventsSelector = createSelector(
   selectionSelector,
   entitiesSelector,
   (selection, entities) =>
-    selection.map((id) => entities.find((event) => event.id === id))
+    selection
+      .map((id) => entities.find((event) => event.id === id))
+      .map((event) => ({
+        ...event.toJS(),
+        participants: event.toJS().participants
+      }))
 )
 
 /**
  * Action Creators
  * */
-
 export function fetchAllEvents() {
   return {
     type: FETCH_ALL_REQUEST
@@ -140,7 +156,6 @@ export function addPersonToEvent(personId, eventId) {
 /**
  * Sagas
  * */
-
 export function* fetchAllSaga() {
   yield put({
     type: FETCH_ALL_START
@@ -173,9 +188,22 @@ export const fetchLazySaga = function*() {
   })
 }
 
+export function* addPersonToEventSaga({ payload: { personId, eventId } }) {
+  const state = yield select(stateSelector)
+  const eventIndex = state
+    .get('entities')
+    .findIndex((event) => event.id == eventId)
+
+  yield put({
+    type: ADD_PERSON_TO_EVENT_SUCCESS,
+    payload: { personId, eventIndex }
+  })
+}
+
 export function* saga() {
   yield all([
     takeEvery(FETCH_ALL_REQUEST, fetchAllSaga),
-    takeEvery(FETCH_LAZY_REQUEST, fetchLazySaga)
+    takeEvery(FETCH_LAZY_REQUEST, fetchLazySaga),
+    takeEvery(ADD_PERSON_TO_EVENT, addPersonToEventSaga)
   ])
 }
