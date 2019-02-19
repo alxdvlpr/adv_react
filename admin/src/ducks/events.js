@@ -1,4 +1,4 @@
-import { all, takeEvery, put, call, take, select } from 'redux-saga/effects'
+import { all, takeEvery, put, call, select } from 'redux-saga/effects'
 import { appName } from '../config'
 import { Record, List, OrderedSet } from 'immutable'
 import { createSelector } from 'reselect'
@@ -23,6 +23,9 @@ export const ADD_PERSON_TO_EVENT_ERROR = `${prefix}/ADD_PERSON_TO_EVENT_ERROR`
 export const FETCH_LAZY_REQUEST = `${prefix}/FETCH_LAZY_REQUEST`
 export const FETCH_LAZY_START = `${prefix}/FETCH_LAZY_START`
 export const FETCH_LAZY_SUCCESS = `${prefix}/FETCH_LAZY_SUCCESS`
+
+export const DELETE_EVENT_REQUEST = `${prefix}/DELETE_EVENT_REQUEST`
+export const DELETE_EVENT_SUCCESS = `${prefix}/DELETE_EVENT_SUCCESS`
 
 /**
  * Reducer
@@ -79,6 +82,11 @@ export default function reducer(state = new ReducerRecord(), action) {
             return participants.push(payload.personId)
           }
         )
+      })
+
+    case DELETE_EVENT_SUCCESS:
+      return state.updateIn(['entities'], (entities) => {
+        return entities.delete(payload.index)
       })
 
     default:
@@ -153,6 +161,13 @@ export function addPersonToEvent(personId, eventId) {
   }
 }
 
+export function deleteEvent(id) {
+  return {
+    type: DELETE_EVENT_REQUEST,
+    payload: { id }
+  }
+}
+
 /**
  * Sagas
  * */
@@ -215,10 +230,20 @@ export function* addPersonToEventSaga({ payload: { personId, eventId } }) {
   }
 }
 
+export function* deleteEventSaga({ payload: { id } }) {
+  const entities = yield select(eventListSelector)
+
+  yield put({
+    type: DELETE_EVENT_SUCCESS,
+    payload: { index: entities.findIndex((event) => event.id == id) }
+  })
+}
+
 export function* saga() {
   yield all([
     takeEvery(FETCH_ALL_REQUEST, fetchAllSaga),
     takeEvery(FETCH_LAZY_REQUEST, fetchLazySaga),
-    takeEvery(ADD_PERSON_TO_EVENT, addPersonToEventSaga)
+    takeEvery(ADD_PERSON_TO_EVENT, addPersonToEventSaga),
+    takeEvery(DELETE_EVENT_REQUEST, deleteEventSaga)
   ])
 }

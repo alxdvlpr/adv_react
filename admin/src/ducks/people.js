@@ -2,7 +2,7 @@ import { appName } from '../config'
 import { Record, List } from 'immutable'
 import { reset } from 'redux-form'
 import { createSelector } from 'reselect'
-import { takeEvery, put, call } from 'redux-saga/effects'
+import { all, takeEvery, put, call, select } from 'redux-saga/effects'
 import { generateId } from './utils'
 
 const peopleMock = [
@@ -32,6 +32,8 @@ export const moduleName = 'people'
 const prefix = `${appName}/${moduleName}`
 export const ADD_PERSON = `${prefix}/ADD_PERSON`
 export const ADD_PERSON_REQUEST = `${prefix}/ADD_PERSON_REQUEST`
+export const DELETE_PERSON_REQUEST = `${prefix}/DELETE_PERSON_REQUEST`
+export const DELETE_PERSON_SUCCESS = `${prefix}/DELETE_PERSON_SUCCESS`
 
 /**
  * Reducer
@@ -54,6 +56,10 @@ export default function reducer(state = new ReducerState(), action) {
     case ADD_PERSON:
       return state.update('entities', (entities) =>
         entities.push(new PersonRecord(payload.person))
+      )
+    case DELETE_PERSON_SUCCESS:
+      return state.update('entities', (entities) =>
+        entities.delete(payload.index)
       )
 
     default:
@@ -88,20 +94,12 @@ export function addPerson(person) {
   }
 }
 
-/*
-export function addPerson(person) {
-  return (dispatch) => {
-    dispatch({
-      type: ADD_PERSON,
-      payload: {
-        person: { id: Date.now(), ...person }
-      }
-    })
-
-    dispatch(reset('person'))
+export function deletePerson(id) {
+  return {
+    type: DELETE_PERSON_REQUEST,
+    payload: { id }
   }
 }
-*/
 
 /**
  *  Sagas
@@ -119,6 +117,18 @@ export function* addPersonSaga(action) {
   yield put(reset('person'))
 }
 
+export function* deletePersonSaga({ payload: { id } }) {
+  const { entities } = yield select(stateSelector)
+
+  yield put({
+    type: DELETE_PERSON_SUCCESS,
+    payload: { index: entities.findIndex((event) => event.id == id) }
+  })
+}
+
 export function* saga() {
-  yield takeEvery(ADD_PERSON_REQUEST, addPersonSaga)
+  yield all([
+    takeEvery(ADD_PERSON_REQUEST, addPersonSaga),
+    takeEvery(DELETE_PERSON_REQUEST, deletePersonSaga)
+  ])
 }

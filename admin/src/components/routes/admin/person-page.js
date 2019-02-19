@@ -5,6 +5,7 @@ import NewPersonForm from '../../people/new-person-form'
 import PeopleList from '../../people/people-list'
 import SelectedEventsList from '../../events/selected-events-list'
 import EventLazyTable from '../../events/virtualized-lazy-table'
+import Trash from '../../common/trash'
 
 class PersonPage extends Component {
   static propTypes = {}
@@ -17,6 +18,7 @@ class PersonPage extends Component {
         <PeopleList />
         <EventLazyTable />
         <NewPersonForm onSubmit={this.props.addPerson} />
+        <Trash />
       </div>
     )
   }
