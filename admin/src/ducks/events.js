@@ -18,6 +18,7 @@ export const FETCH_ALL_SUCCESS = `${prefix}/FETCH_ALL_SUCCESS`
 export const TOGGLE_SELECTION = `${prefix}/TOGGLE_SELECTION`
 export const ADD_PERSON_TO_EVENT = `${prefix}/ADD_PERSON_TO_EVENT`
 export const ADD_PERSON_TO_EVENT_SUCCESS = `${prefix}/ADD_PERSON_TO_EVENT_SUCCESS`
+export const ADD_PERSON_TO_EVENT_ERROR = `${prefix}/ADD_PERSON_TO_EVENT_ERROR`
 
 export const FETCH_LAZY_REQUEST = `${prefix}/FETCH_LAZY_REQUEST`
 export const FETCH_LAZY_START = `${prefix}/FETCH_LAZY_START`
@@ -75,7 +76,6 @@ export default function reducer(state = new ReducerRecord(), action) {
         return entities.updateIn(
           [payload.eventIndex, 'participants'],
           (participants) => {
-            console.log(participants.push(payload.personId))
             return participants.push(payload.personId)
           }
         )
@@ -190,14 +190,31 @@ export const fetchLazySaga = function*() {
 
 export function* addPersonToEventSaga({ payload: { personId, eventId } }) {
   const state = yield select(stateSelector)
-  const eventIndex = state
-    .get('entities')
-    .findIndex((event) => event.id == eventId)
 
-  yield put({
-    type: ADD_PERSON_TO_EVENT_SUCCESS,
-    payload: { personId, eventIndex }
-  })
+  try {
+    const participantList = state
+      .get('entities')
+      .find((event) => event.id == eventId)
+      .participants.toArray()
+
+    const data = yield call(api.updateEvent, eventId, {
+      participants: [...participantList, personId]
+    })
+
+    const eventIndex = state
+      .get('entities')
+      .findIndex((event) => event.id == eventId)
+
+    yield put({
+      type: ADD_PERSON_TO_EVENT_SUCCESS,
+      payload: { personId, eventIndex }
+    })
+  } catch (error) {
+    yield put({
+      type: ADD_PERSON_TO_EVENT_ERROR,
+      error
+    })
+  }
 }
 
 export function* saga() {

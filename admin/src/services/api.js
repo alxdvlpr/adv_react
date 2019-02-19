@@ -17,7 +17,12 @@ class ApiService {
       .firestore()
       .collection('events')
       .get()
-      .then((res) => res.docs.map((doc) => doc.data()))
+      .then((res) =>
+        res.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id
+        }))
+      )
 
   fetchLazyEvents = (id) =>
     this.fb
@@ -27,7 +32,22 @@ class ApiService {
       .startAfter(id ? id : '')
       .limit(10)
       .get()
-      .then((res) => res.docs.map((doc) => doc.data()))
+      .then((res) =>
+        res.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id
+        }))
+      )
+
+  updateEvent = (eventId, updates) => {
+    return firebase
+      .firestore()
+      .collection('events')
+      .doc(eventId)
+      .set(updates)
+  }
 }
 
 export default new ApiService()
+// Dev only
+window.apiService = new ApiService()
