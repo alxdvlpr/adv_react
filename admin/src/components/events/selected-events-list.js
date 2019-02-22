@@ -15,6 +15,7 @@ class SelectedEventsList extends Component {
         rowCount={this.props.events.length}
         rowHeight={150}
         rowRenderer={this.rowRenderer}
+        data={this.props.events} // Overhead for re-rendering then events update
       />
     )
   }

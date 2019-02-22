@@ -13,8 +13,8 @@ const sagaMiddleware = createSagaMiddleware()
 const enhancer = applyMiddleware(
   thunk,
   sagaMiddleware,
-  routerMiddleware(history),
-  logger
+  routerMiddleware(history)
+  // logger
 )
 
 const store = createStore(reducer, enhancer)

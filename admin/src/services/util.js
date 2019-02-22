@@ -6,8 +6,8 @@ export function generateId() {
 
 export function fbToEntities(values, DataRecord) {
   return new List(
-    Object.entries(values).map(
-      ([id, value]) => new DataRecord({ id, ...value })
-    )
+    Object.entries(values).map(([id, value]) => {
+      return new DataRecord(value)
+    })
   )
 }

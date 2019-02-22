@@ -17,10 +17,15 @@ export const FETCH_ALL_SUCCESS = `${prefix}/FETCH_ALL_SUCCESS`
 
 export const TOGGLE_SELECTION = `${prefix}/TOGGLE_SELECTION`
 export const ADD_PERSON_TO_EVENT = `${prefix}/ADD_PERSON_TO_EVENT`
+export const ADD_PERSON_TO_EVENT_SUCCESS = `${prefix}/ADD_PERSON_TO_EVENT_SUCCESS`
+export const ADD_PERSON_TO_EVENT_ERROR = `${prefix}/ADD_PERSON_TO_EVENT_ERROR`
 
 export const FETCH_LAZY_REQUEST = `${prefix}/FETCH_LAZY_REQUEST`
 export const FETCH_LAZY_START = `${prefix}/FETCH_LAZY_START`
 export const FETCH_LAZY_SUCCESS = `${prefix}/FETCH_LAZY_SUCCESS`
+
+export const DELETE_EVENT_REQUEST = `${prefix}/DELETE_EVENT_REQUEST`
+export const DELETE_EVENT_SUCCESS = `${prefix}/DELETE_EVENT_SUCCESS`
 
 /**
  * Reducer
@@ -39,7 +44,8 @@ export const EventRecord = Record({
   title: null,
   url: null,
   when: null,
-  where: null
+  where: null,
+  participants: new List([])
 })
 
 export default function reducer(state = new ReducerRecord(), action) {
@@ -68,6 +74,21 @@ export default function reducer(state = new ReducerRecord(), action) {
         .mergeIn(['entities'], fbToEntities(payload, EventRecord))
         .set('loaded', Object.keys(payload).length < 10)
 
+    case ADD_PERSON_TO_EVENT_SUCCESS:
+      return state.updateIn(['entities'], (entities) => {
+        return entities.updateIn(
+          [payload.eventIndex, 'participants'],
+          (participants) => {
+            return participants.push(payload.personId)
+          }
+        )
+      })
+
+    case DELETE_EVENT_SUCCESS:
+      return state.updateIn(['entities'], (entities) => {
+        return entities.delete(payload.index)
+      })
+
     default:
       return state
   }
@@ -76,7 +97,6 @@ export default function reducer(state = new ReducerRecord(), action) {
 /**
  * Selectors
  * */
-
 export const stateSelector = (state) => state[moduleName]
 export const entitiesSelector = createSelector(
   stateSelector,
@@ -94,23 +114,29 @@ export const eventListSelector = createSelector(
   entitiesSelector,
   (entities) => entities.toArray()
 )
-
 export const selectionSelector = createSelector(
   stateSelector,
   (state) => state.selected.toArray()
 )
-
 export const selectedEventsSelector = createSelector(
   selectionSelector,
   entitiesSelector,
   (selection, entities) =>
-    selection.map((id) => entities.find((event) => event.id === id))
+    selection
+      .map((id) => entities.find((event) => event.id === id))
+      .map((event) => {
+        return (
+          event && {
+            ...event.toJS(),
+            participants: event.toJS().participants
+          }
+        )
+      })
 )
 
 /**
  * Action Creators
  * */
-
 export function fetchAllEvents() {
   return {
     type: FETCH_ALL_REQUEST
@@ -137,10 +163,16 @@ export function addPersonToEvent(personId, eventId) {
   }
 }
 
+export function deleteEvent(id) {
+  return {
+    type: DELETE_EVENT_REQUEST,
+    payload: { id }
+  }
+}
+
 /**
  * Sagas
  * */
-
 export function* fetchAllSaga() {
   yield put({
     type: FETCH_ALL_START
@@ -154,7 +186,7 @@ export function* fetchAllSaga() {
   })
 }
 
-export const fetchLazySaga = function*() {
+export function* fetchLazySaga() {
   const state = yield select(stateSelector)
 
   if (state.loading || state.loaded) return
@@ -173,9 +205,47 @@ export const fetchLazySaga = function*() {
   })
 }
 
+export function* addPersonToEventSaga({ payload: { personId, eventId } }) {
+  const entities = yield select(eventListSelector)
+  const participants = entities
+    .find((event) => event.id == eventId)
+    .participants.toArray()
+
+  if (participants.includes(personId)) return null
+
+  try {
+    const eventIndex = entities.findIndex((event) => event.id == eventId)
+
+    yield call(api.updateEvent, eventId, {
+      participants: [...participants, personId]
+    })
+
+    yield put({
+      type: ADD_PERSON_TO_EVENT_SUCCESS,
+      payload: { personId, eventIndex }
+    })
+  } catch (error) {
+    yield put({
+      type: ADD_PERSON_TO_EVENT_ERROR,
+      error
+    })
+  }
+}
+
+export function* deleteEventSaga({ payload: { id } }) {
+  const entities = yield select(eventListSelector)
+
+  yield put({
+    type: DELETE_EVENT_SUCCESS,
+    payload: { index: entities.findIndex((event) => event.id == id) }
+  })
+}
+
 export function* saga() {
   yield all([
     takeEvery(FETCH_ALL_REQUEST, fetchAllSaga),
-    takeEvery(FETCH_LAZY_REQUEST, fetchLazySaga)
+    takeEvery(FETCH_LAZY_REQUEST, fetchLazySaga),
+    takeEvery(ADD_PERSON_TO_EVENT, addPersonToEventSaga),
+    takeEvery(DELETE_EVENT_REQUEST, deleteEventSaga)
   ])
 }
